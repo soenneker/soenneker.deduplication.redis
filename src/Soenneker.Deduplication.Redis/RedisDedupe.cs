@@ -14,99 +14,87 @@ namespace Soenneker.Deduplication.Redis;
 /// <inheritdoc cref="IRedisDedupe"/>
 public sealed class RedisDedupe : IRedisDedupe
 {
-    private const string DefaultCacheKey = "dedupe";
-
     private readonly IRedisUtil _redisUtil;
-    private readonly long _seed;
 
-    public RedisDedupe(IRedisUtil redisUtil, string cacheKey = DefaultCacheKey, TimeSpan? expiration = null,
-        long seed = 0)
+    public RedisDedupe(IRedisUtil redisUtil)
     {
         ArgumentNullException.ThrowIfNull(redisUtil);
 
-        if (string.IsNullOrWhiteSpace(cacheKey))
-            throw new ArgumentException("Cache key cannot be null or whitespace.", nameof(cacheKey));
+        _redisUtil = redisUtil;
+    }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryMarkSeen(string cacheKey, string cacheValue, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cacheValue);
+
+        return TryMarkSeen(cacheKey, cacheValue.AsSpan(), expiration, cancellationToken);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryMarkSeen(string cacheKey, ReadOnlySpan<char> cacheValue, TimeSpan? expiration = null,
+        CancellationToken cancellationToken = default) =>
+        TryMarkHashSeen(cacheKey, XxHash3Util.HashCharsToUInt64(cacheValue), expiration, cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryMarkSeenUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, TimeSpan? expiration = null,
+        CancellationToken cancellationToken = default) =>
+        TryMarkHashSeen(cacheKey, XxHash3Util.HashUtf8ToUInt64(cacheValue), expiration, cancellationToken);
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> Contains(string cacheKey, string cacheValue, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cacheValue);
+
+        return Contains(cacheKey, cacheValue.AsSpan(), cancellationToken);
+    }
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> Contains(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default) =>
+        ContainsHash(cacheKey, XxHash3Util.HashCharsToUInt64(cacheValue), cancellationToken);
+
+    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> ContainsUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default) =>
+        ContainsHash(cacheKey, XxHash3Util.HashUtf8ToUInt64(cacheValue), cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryRemove(string cacheKey, string cacheValue, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(cacheValue);
+
+        return TryRemove(cacheKey, cacheValue.AsSpan(), cancellationToken);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryRemove(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default) =>
+        TryRemoveHash(cacheKey, XxHash3Util.HashCharsToUInt64(cacheValue), cancellationToken);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ValueTask<bool> TryRemoveUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default) =>
+        TryRemoveHash(cacheKey, XxHash3Util.HashUtf8ToUInt64(cacheValue), cancellationToken);
+
+    private async ValueTask<bool> TryMarkHashSeen(string cacheKey, ulong hash, TimeSpan? expiration, CancellationToken cancellationToken)
+    {
         if (expiration <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(expiration), "Expiration must be greater than zero.");
 
-        _redisUtil = redisUtil;
-        CacheKey = cacheKey;
-        Expiration = expiration;
-        _seed = seed;
+        string redisKey = BuildRedisKey(cacheKey, hash);
+
+        return await _redisUtil.SetIfNotExists(redisKey, "1", expiration, cancellationToken).NoSync();
     }
 
-    public string CacheKey { get; }
-
-    public TimeSpan? Expiration { get; }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryMarkSeen(string value, CancellationToken cancellationToken = default)
+    private async ValueTask<bool> ContainsHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(value);
-
-        return TryMarkSeen(value.AsSpan(), cancellationToken);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryMarkSeen(ReadOnlySpan<char> value, CancellationToken cancellationToken = default) =>
-        TryMarkHashSeen(XxHash3Util.HashCharsToUInt64(value, _seed), cancellationToken);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryMarkSeenUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default) =>
-        TryMarkHashSeen(XxHash3Util.HashUtf8ToUInt64(utf8, _seed), cancellationToken);
-
-    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> Contains(string value, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        return Contains(value.AsSpan(), cancellationToken);
-    }
-
-    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> Contains(ReadOnlySpan<char> value, CancellationToken cancellationToken = default) =>
-        ContainsHash(XxHash3Util.HashCharsToUInt64(value, _seed), cancellationToken);
-
-    [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> ContainsUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default) =>
-        ContainsHash(XxHash3Util.HashUtf8ToUInt64(utf8, _seed), cancellationToken);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryRemove(string value, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        return TryRemove(value.AsSpan(), cancellationToken);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryRemove(ReadOnlySpan<char> value, CancellationToken cancellationToken = default) =>
-        TryRemoveHash(XxHash3Util.HashCharsToUInt64(value, _seed), cancellationToken);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ValueTask<bool> TryRemoveUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default) =>
-        TryRemoveHash(XxHash3Util.HashUtf8ToUInt64(utf8, _seed), cancellationToken);
-
-    private async ValueTask<bool> TryMarkHashSeen(ulong hash, CancellationToken cancellationToken)
-    {
-        string redisKey = BuildRedisKey(hash);
-
-        return await _redisUtil.SetIfNotExists(redisKey, "1", Expiration, cancellationToken).NoSync();
-    }
-
-    private async ValueTask<bool> ContainsHash(ulong hash, CancellationToken cancellationToken)
-    {
-        string redisKey = BuildRedisKey(hash);
+        string redisKey = BuildRedisKey(cacheKey, hash);
 
         string? value = await _redisUtil.GetString(redisKey, cancellationToken).NoSync();
 
         return value is not null;
     }
 
-    private async ValueTask<bool> TryRemoveHash(ulong hash, CancellationToken cancellationToken)
+    private async ValueTask<bool> TryRemoveHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
-        string redisKey = BuildRedisKey(hash);
+        string redisKey = BuildRedisKey(cacheKey, hash);
 
         string? value = await _redisUtil.GetString(redisKey, cancellationToken).NoSync();
 
@@ -119,5 +107,11 @@ public sealed class RedisDedupe : IRedisDedupe
     }
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private string BuildRedisKey(ulong hash) => RedisUtil.BuildKey(CacheKey, hash.ToString("x16"));
+    private static string BuildRedisKey(string cacheKey, ulong hash)
+    {
+        if (string.IsNullOrWhiteSpace(cacheKey))
+            throw new ArgumentException("Cache key cannot be null or whitespace.", nameof(cacheKey));
+
+        return RedisUtil.BuildKey(cacheKey, hash.ToString("x16"));
+    }
 }

@@ -11,66 +11,68 @@ namespace Soenneker.Deduplication.Redis.Abstract;
 public interface IRedisDedupe
 {
     /// <summary>
-    /// The Redis key prefix used for this dedupe scope.
+    /// Attempts to mark <paramref name="cacheValue"/> as seen within <paramref name="cacheKey"/>.
     /// </summary>
-    string CacheKey { get; }
+    /// <param name="cacheKey">The Redis keyspace for this dedupe set.</param>
+    /// <param name="cacheValue">The value to hash and mark as seen.</param>
+    /// <param name="expiration">The expiration applied when the value is first marked as seen. <c>null</c> means no automatic expiration.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><c>true</c> if the value was not previously seen in the cache key; otherwise <c>false</c>.</returns>
+    ValueTask<bool> TryMarkSeen(string cacheKey, string cacheValue, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// The expiration applied when a value is first marked as seen. <c>null</c> means values do not expire automatically.
+    /// Attempts to mark <paramref name="cacheValue"/> as seen within <paramref name="cacheKey"/>.
     /// </summary>
-    TimeSpan? Expiration { get; }
+    /// <param name="cacheKey">The Redis keyspace for this dedupe set.</param>
+    /// <param name="cacheValue">The value to hash and mark as seen.</param>
+    /// <param name="expiration">The expiration applied when the value is first marked as seen. <c>null</c> means no automatic expiration.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><c>true</c> if the value was not previously seen in the cache key; otherwise <c>false</c>.</returns>
+    ValueTask<bool> TryMarkSeen(string cacheKey, ReadOnlySpan<char> cacheValue, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to mark the specified value as seen.
+    /// Attempts to mark <paramref name="cacheValue"/> as seen within <paramref name="cacheKey"/>.
     /// </summary>
-    /// <returns><c>true</c> if the value was not previously seen; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryMarkSeen(string value, CancellationToken cancellationToken = default);
+    /// <param name="cacheKey">The Redis keyspace for this dedupe set.</param>
+    /// <param name="cacheValue">The UTF-8 value to hash and mark as seen.</param>
+    /// <param name="expiration">The expiration applied when the value is first marked as seen. <c>null</c> means no automatic expiration.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns><c>true</c> if the value was not previously seen in the cache key; otherwise <c>false</c>.</returns>
+    ValueTask<bool> TryMarkSeenUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, TimeSpan? expiration = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to mark the specified character span as seen.
-    /// </summary>
-    /// <returns><c>true</c> if the value was not previously seen; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryMarkSeen(ReadOnlySpan<char> value, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Attempts to mark the specified UTF-8 payload as seen.
-    /// </summary>
-    /// <returns><c>true</c> if the value was not previously seen; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryMarkSeenUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Determines whether the specified value currently exists in Redis.
+    /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
     [Pure]
-    ValueTask<bool> Contains(string value, CancellationToken cancellationToken = default);
+    ValueTask<bool> Contains(string cacheKey, string cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether the specified character span currently exists in Redis.
+    /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
     [Pure]
-    ValueTask<bool> Contains(ReadOnlySpan<char> value, CancellationToken cancellationToken = default);
+    ValueTask<bool> Contains(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether the specified UTF-8 payload currently exists in Redis.
+    /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
     [Pure]
-    ValueTask<bool> ContainsUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default);
+    ValueTask<bool> ContainsUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to remove the specified value from Redis.
+    /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryRemove(string value, CancellationToken cancellationToken = default);
+    ValueTask<bool> TryRemove(string cacheKey, string cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to remove the specified character span from Redis.
+    /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryRemove(ReadOnlySpan<char> value, CancellationToken cancellationToken = default);
+    ValueTask<bool> TryRemove(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to remove the specified UTF-8 payload from Redis.
+    /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
-    ValueTask<bool> TryRemoveUtf8(ReadOnlySpan<byte> utf8, CancellationToken cancellationToken = default);
+    ValueTask<bool> TryRemoveUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default);
 }
