@@ -15,8 +15,7 @@ public static class RedisDedupeRegistrar
     /// </summary>
     public static IServiceCollection AddRedisDedupeAsSingleton(this IServiceCollection services)
     {
-        services.AddRedisUtilAsSingleton()
-                .TryAddSingleton<IRedisDedupe, RedisDedupe>();
+        services.AddRedisUtilAsSingleton().TryAddSingleton<IRedisDedupe, RedisDedupe>();
 
         return services;
     }
@@ -26,8 +25,7 @@ public static class RedisDedupeRegistrar
     /// </summary>
     public static IServiceCollection AddRedisDedupeAsScoped(this IServiceCollection services)
     {
-        services.AddRedisUtilAsScoped()
-                .TryAddScoped<IRedisDedupe, RedisDedupe>();
+        services.AddRedisUtilAsScoped().TryAddScoped<IRedisDedupe, RedisDedupe>();
 
         return services;
     }
