@@ -43,36 +43,57 @@ public interface IRedisDedupe
     /// <summary>
     /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>true if currently exists within; otherwise, false.</returns>
     [Pure]
     ValueTask<bool> Contains(string cacheKey, string cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>true if currently exists within; otherwise, false.</returns>
     [Pure]
     ValueTask<bool> Contains(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Determines whether <paramref name="cacheValue"/> currently exists within <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>true if currently exists within; otherwise, false.</returns>
     [Pure]
     ValueTask<bool> ContainsUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
     ValueTask<bool> TryRemove(string cacheKey, string cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
     ValueTask<bool> TryRemove(string cacheKey, ReadOnlySpan<char> cacheValue, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Attempts to remove <paramref name="cacheValue"/> from <paramref name="cacheKey"/>.
     /// </summary>
+    /// <param name="cacheKey">Base cache key used to build the Redis key.</param>
+    /// <param name="cacheValue">Value to store in the cache.</param>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
     /// <returns><c>true</c> if the value existed before removal; otherwise <c>false</c>.</returns>
     ValueTask<bool> TryRemoveUtf8(string cacheKey, ReadOnlySpan<byte> cacheValue, CancellationToken cancellationToken = default);
 }
