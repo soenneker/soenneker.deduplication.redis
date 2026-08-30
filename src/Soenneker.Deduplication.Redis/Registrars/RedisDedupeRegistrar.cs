@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Soenneker.Deduplication.Redis.Abstract;
-using Soenneker.Redis.Util.Registrars;
+using Soenneker.Redis.Client.Registrars;
 
 namespace Soenneker.Deduplication.Redis.Registrars;
 
@@ -17,7 +17,7 @@ public static class RedisDedupeRegistrar
     /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddRedisDedupeAsSingleton(this IServiceCollection services)
     {
-        services.AddRedisUtilAsSingleton().TryAddSingleton<IRedisDedupe, RedisDedupe>();
+        services.AddRedisClientAsSingleton().TryAddSingleton<IRedisDedupe, RedisDedupe>();
 
         return services;
     }
@@ -29,7 +29,7 @@ public static class RedisDedupeRegistrar
     /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddRedisDedupeAsScoped(this IServiceCollection services)
     {
-        services.AddRedisUtilAsScoped().TryAddScoped<IRedisDedupe, RedisDedupe>();
+        services.AddRedisClientAsScoped().TryAddScoped<IRedisDedupe, RedisDedupe>();
 
         return services;
     }

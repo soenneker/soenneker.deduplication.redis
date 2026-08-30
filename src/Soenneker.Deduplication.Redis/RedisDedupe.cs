@@ -4,23 +4,21 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Soenneker.Deduplication.Redis.Abstract;
-using Soenneker.Extensions.ValueTask;
 using Soenneker.Hashing.XxHash;
-using Soenneker.Redis.Util;
-using Soenneker.Redis.Util.Abstract;
+using Soenneker.Redis.Client.Abstract;
+using StackExchange.Redis;
 
 namespace Soenneker.Deduplication.Redis;
 
-/// <inheritdoc cref="IRedisDedupe"/>
 public sealed class RedisDedupe : IRedisDedupe
 {
-    private readonly IRedisUtil _redisUtil;
+    private readonly IRedisClient _redisClient;
 
-    public RedisDedupe(IRedisUtil redisUtil)
+    public RedisDedupe(IRedisClient redisClient)
     {
-        ArgumentNullException.ThrowIfNull(redisUtil);
+        ArgumentNullException.ThrowIfNull(redisClient);
 
-        _redisUtil = redisUtil;
+        _redisClient = redisClient;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -79,31 +77,29 @@ public sealed class RedisDedupe : IRedisDedupe
             throw new ArgumentOutOfRangeException(nameof(expiration), "Expiration must be greater than zero.");
 
         string redisKey = BuildRedisKey(cacheKey, hash);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        IDatabase database = connection.GetDatabase();
 
-        return await _redisUtil.SetIfNotExists(redisKey, "1", expiration, cancellationToken).NoSync();
+        return await database.StringSetAsync(redisKey, "1", expiration, when: When.NotExists)
+            .WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<bool> ContainsHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
         string redisKey = BuildRedisKey(cacheKey, hash);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        IDatabase database = connection.GetDatabase();
 
-        string? value = await _redisUtil.GetString(redisKey, cancellationToken).NoSync();
-
-        return value is not null;
+        return await database.KeyExistsAsync(redisKey).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<bool> TryRemoveHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
         string redisKey = BuildRedisKey(cacheKey, hash);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        IDatabase database = connection.GetDatabase();
 
-        string? value = await _redisUtil.GetString(redisKey, cancellationToken).NoSync();
-
-        if (value is null)
-            return false;
-
-        await _redisUtil.Remove(redisKey, cancellationToken: cancellationToken).NoSync();
-
-        return true;
+        return await database.KeyDeleteAsync(redisKey).WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -112,6 +108,6 @@ public sealed class RedisDedupe : IRedisDedupe
         if (string.IsNullOrWhiteSpace(cacheKey))
             throw new ArgumentException("Cache key cannot be null or whitespace.", nameof(cacheKey));
 
-        return RedisUtil.BuildKey(cacheKey, hash.ToString("x16"));
+        return $"{cacheKey}:{hash:x16}";
     }
 }
