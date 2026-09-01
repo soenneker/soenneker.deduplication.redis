@@ -1,3 +1,5 @@
+using Soenneker.Extensions.ValueTask;
+using Soenneker.Extensions.Task;
 using System;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
@@ -77,29 +79,29 @@ public sealed class RedisDedupe : IRedisDedupe
             throw new ArgumentOutOfRangeException(nameof(expiration), "Expiration must be greater than zero.");
 
         string redisKey = BuildRedisKey(cacheKey, hash);
-        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).NoSync();
         IDatabase database = connection.GetDatabase();
 
         return await database.StringSetAsync(redisKey, "1", expiration, when: When.NotExists)
-            .WaitAsync(cancellationToken).ConfigureAwait(false);
+            .WaitAsync(cancellationToken).NoSync();
     }
 
     private async ValueTask<bool> ContainsHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
         string redisKey = BuildRedisKey(cacheKey, hash);
-        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).NoSync();
         IDatabase database = connection.GetDatabase();
 
-        return await database.KeyExistsAsync(redisKey).WaitAsync(cancellationToken).ConfigureAwait(false);
+        return await database.KeyExistsAsync(redisKey).WaitAsync(cancellationToken).NoSync();
     }
 
     private async ValueTask<bool> TryRemoveHash(string cacheKey, ulong hash, CancellationToken cancellationToken)
     {
         string redisKey = BuildRedisKey(cacheKey, hash);
-        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).ConfigureAwait(false);
+        ConnectionMultiplexer connection = await _redisClient.Get(cancellationToken).NoSync();
         IDatabase database = connection.GetDatabase();
 
-        return await database.KeyDeleteAsync(redisKey).WaitAsync(cancellationToken).ConfigureAwait(false);
+        return await database.KeyDeleteAsync(redisKey).WaitAsync(cancellationToken).NoSync();
     }
 
     [Pure, MethodImpl(MethodImplOptions.AggressiveInlining)]
