@@ -12,6 +12,7 @@ using StackExchange.Redis;
 
 namespace Soenneker.Deduplication.Redis;
 
+/// <inheritdoc cref="IRedisDedupe" />
 public sealed class RedisDedupe : IRedisDedupe
 {
     private readonly IRedisClient _redisClient;
