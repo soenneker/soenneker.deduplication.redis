@@ -47,6 +47,6 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.Hashing.XxHash" Version="11.0.137" />
-        <PackageReference Include="Soenneker.Redis.Client" Version="11.0.2402" />
+        <PackageReference Include="Soenneker.Redis.Client" Version="11.0.2403" />
     </ItemGroup>
 </Project>
